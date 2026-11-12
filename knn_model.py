@@ -12,134 +12,130 @@ pois_test = pd.read_csv('data/mushroom_poisonous_test.csv')
 habi_train = pd.read_csv('data/mushroom_habitat_train.csv')
 habi_test = pd.read_csv('data/mushroom_habitat_test.csv')
 
+def knn_model(df_train, df_test, k_values,):
+    X_train = df_train.iloc[:, :-1]
+    y_train = df_train.iloc[:, -1]
+    X_test = df_test.iloc[:, :-1]
+    y_test = df_test.iloc[:, -1]
 
-X_train = pois_train.iloc[:, :-1]
-y_train = pois_train.iloc[:, -1]
+    kf = KFold(n_splits=len(k_values), shuffle=False)
+    results = []
 
-X_test = pois_test.iloc[:, :-1]
-y_test = pois_test.iloc[:, -1]
+    cv_start = time.time()
 
+    for k in k_values:
 
-k_values = [5, 15, 25, 35, 45]
-kf = KFold(n_splits=5, shuffle=False)
-results = []
+        fold_accuracies = []
 
-cv_start = time.time()
+        for train_index, val_index in kf.split(df_train):
+            training_fold = df_train.iloc[train_index]
+            validation_fold = df_train.iloc[val_index]
 
-for k in k_values:
+            X_fold_train = training_fold.iloc[:, :-1]
+            y_fold_train = training_fold.iloc[:, -1]
 
-    fold_accuracies = []
+            X_fold_val = validation_fold.iloc[:, :-1]
+            y_fold_val = validation_fold.iloc[:, -1]
 
-    for train_index, val_index in kf.split(pois_train):
+            imputer = SimpleImputer(strategy='most_frequent')
 
-        training_fold = pois_train.iloc[train_index]
-        validation_fold = pois_train.iloc[val_index]
+            X_fold_train = imputer.fit_transform(X_fold_train)
+            X_fold_val = imputer.transform(X_fold_val)
 
-        X_fold_train = training_fold.iloc[:, :-1]
-        y_fold_train = training_fold.iloc[:, -1]
+            encoder = OrdinalEncoder(
+                handle_unknown='use_encoded_value',
+                unknown_value=-1
+            )
 
-        X_fold_val = validation_fold.iloc[:, :-1]
-        y_fold_val = validation_fold.iloc[:, -1]
+            X_fold_train = encoder.fit_transform(X_fold_train)
+            X_fold_val = encoder.transform(X_fold_val)
 
-        imputer = SimpleImputer(strategy='most_frequent')
+            model = KNeighborsClassifier(
+                n_neighbors=k,
+                metric='hamming'
+            )
 
-        X_fold_train = imputer.fit_transform(X_fold_train)
-        X_fold_val = imputer.transform(X_fold_val)
+            model.fit(X_fold_train, y_fold_train)
+            predictions = model.predict(X_fold_val)
+            accuracy = accuracy_score(y_fold_val, predictions)
+            fold_accuracies.append(accuracy)
 
-        encoder = OrdinalEncoder(
-            handle_unknown='use_encoded_value',
-            unknown_value=-1
-        )
+        mean_accuracy = np.mean(fold_accuracies)
 
-        X_fold_train = encoder.fit_transform(X_fold_train)
-        X_fold_val = encoder.transform(X_fold_val)
+        resultsrow = {'Hyperparameter (k)': k}
+        for i in range(len(k_values)):
+            name = 'Fold ' + str(i+1) + ' Accuracy'
+            resultsrow[name] = fold_accuracies[i]
+        resultsrow['Average Accuracy'] = mean_accuracy
 
-        model = KNeighborsClassifier(
-            n_neighbors=k,
-            metric='hamming'
-        )
+        results.append(resultsrow)
 
-        model.fit(X_fold_train, y_fold_train)
-        predictions = model.predict(X_fold_val)
-        accuracy = accuracy_score(y_fold_val, predictions)
-        fold_accuracies.append(accuracy)
+    cv_end = time.time()
+    cv_runtime = cv_end - cv_start
 
-    mean_accuracy = np.mean(fold_accuracies)
+    results_df = pd.DataFrame(results)
 
-    results.append({
-        'Hyperparameter (k)': k,
-        'Fold 1 Accuracy': fold_accuracies[0],
-        'Fold 2 Accuracy': fold_accuracies[1],
-        'Fold 3 Accuracy': fold_accuracies[2],
-        'Fold 4 Accuracy': fold_accuracies[3],
-        'Fold 5 Accuracy': fold_accuracies[4],
-        'Average Accuracy': mean_accuracy
-    })
+    print(f"{len(k_values)}-FOLD CROSS-VALIDATION RESULTS")
+    print(results_df.to_string(
+        index=False,
+        float_format=lambda x: f'{x:.4f}'
+    ))
 
-cv_end = time.time()
-cv_runtime = cv_end - cv_start
+    print(f"\nCross-validation runtime: {cv_runtime:.4f} seconds")
 
-results_df = pd.DataFrame(results)
+    best_k = int(
+        results_df.loc[
+            results_df['Average Accuracy'].idxmax(),
+            'Hyperparameter (k)']
+    )
+    best_cv_accuracy = results_df['Average Accuracy'].max()
 
-print("5-FOLD CROSS-VALIDATION RESULTS")
-print(results_df.to_string(
-    index=False,
-    float_format=lambda x: f'{x:.4f}'
-))
+    print("\nBEST HYPERPARAMETER")
+    print(f"Best k: {best_k}")
+    print(f"Best CV accuracy: {best_cv_accuracy:.4f}")
+    print(f"Best CV accuracy (%): {best_cv_accuracy * 100:.2f}%")
 
-print(f"\nCross-validation runtime: {cv_runtime:.4f} seconds")
+    retrain_start = time.time()
 
-best_k = int(
-    results_df.loc[
-        results_df['Average Accuracy'].idxmax(),
-        'Hyperparameter (k)']
-)
-best_cv_accuracy = results_df['Average Accuracy'].max()
+    final_imputer = SimpleImputer(strategy='most_frequent')
 
-print("\nBEST HYPERPARAMETER")
-print(f"Best k: {best_k}")
-print(f"Best CV accuracy: {best_cv_accuracy:.4f}")
-print(f"Best CV accuracy (%): {best_cv_accuracy * 100:.2f}%")
+    X_train_imputed = final_imputer.fit_transform(X_train)
+    X_test_imputed = final_imputer.transform(X_test)
 
+    final_encoder = OrdinalEncoder(
+        handle_unknown='use_encoded_value',
+        unknown_value=-1
+    )
 
-retrain_start = time.time()
+    X_train_encoded = final_encoder.fit_transform(X_train_imputed)
+    X_test_encoded = final_encoder.transform(X_test_imputed)
 
-final_imputer = SimpleImputer(strategy='most_frequent')
+    best_model = KNeighborsClassifier(
+        n_neighbors=best_k,
+        metric='hamming'
+    )
 
-X_train_imputed = final_imputer.fit_transform(X_train)
-X_test_imputed = final_imputer.transform(X_test)
+    best_model.fit(X_train_encoded, y_train)
 
-final_encoder = OrdinalEncoder(
-    handle_unknown='use_encoded_value',
-    unknown_value=-1
-)
+    retrain_end = time.time()
+    retrain_runtime = retrain_end - retrain_start
 
-X_train_encoded = final_encoder.fit_transform(X_train_imputed)
-X_test_encoded = final_encoder.transform(X_test_imputed)
+    print("\nFINAL MODEL TRAINING")
+    print(f"Selected k: {best_k}")
+    print(f"Retraining runtime: {retrain_runtime:.4f} seconds")
 
-best_model = KNeighborsClassifier(
-    n_neighbors=best_k,
-    metric='hamming'
-)
+    test_predictions = best_model.predict(X_test_encoded)
+    test_accuracy = accuracy_score(y_test, test_predictions)
 
-best_model.fit(X_train_encoded, y_train)
+    print("\nFINAL TEST SET RESULTS")
+    print(f"Best hyperparameter (k): {best_k}")
+    print(f"Test set accuracy: {test_accuracy:.4f}")
+    print(f"Test set accuracy (%): {test_accuracy * 100:.2f}%")
 
-retrain_end = time.time()
-retrain_runtime = retrain_end - retrain_start
+    print("\nRUNTIME SUMMARY")
+    print(f"Cross-validation runtime: {cv_runtime:.4f} seconds")
+    print(f"Final model training runtime: {retrain_runtime:.4f} seconds")
+    print(f"Total runtime: {cv_runtime + retrain_runtime:.4f} seconds")
 
-print("\nFINAL MODEL TRAINING")
-print(f"Selected k: {best_k}")
-print(f"Retraining runtime: {retrain_runtime:.4f} seconds")
-
-test_predictions = best_model.predict(X_test_encoded)
-test_accuracy = accuracy_score(y_test, test_predictions)
-
-print("\nFINAL TEST SET RESULTS")
-print(f"Best hyperparameter (k): {best_k}")
-print(f"Test set accuracy: {test_accuracy:.4f}")
-print(f"Test set accuracy (%): {test_accuracy * 100:.2f}%")
-
-print("\nRUNTIME SUMMARY")
-print(f"Cross-validation runtime: {cv_runtime:.4f} seconds")
-print(f"Final model training runtime: {retrain_runtime:.4f} seconds")
-print(f"Total runtime: {cv_runtime + retrain_runtime:.4f} seconds")
+knn_model(pois_train, pois_test, [5, 10, 15, 20, 25])
+knn_model(habi_train, habi_test, [1, 3, 5, 7, 10])
