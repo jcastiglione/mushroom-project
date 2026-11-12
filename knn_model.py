@@ -12,7 +12,15 @@ pois_test = pd.read_csv('data/mushroom_poisonous_test.csv')
 habi_train = pd.read_csv('data/mushroom_habitat_train.csv')
 habi_test = pd.read_csv('data/mushroom_habitat_test.csv')
 
-def knn_model(df_train, df_test, k_values,):
+def knn_model(df_train, df_test, k_values, filename):
+    with open(filename, 'w') as f:
+        pass
+
+    def log(message=""):
+        print(message)
+        with open(filename, 'a') as f:
+            f.write(str(message) + '\n')
+
     X_train = df_train.iloc[:, :-1]
     y_train = df_train.iloc[:, -1]
     X_test = df_test.iloc[:, :-1]
@@ -75,13 +83,13 @@ def knn_model(df_train, df_test, k_values,):
 
     results_df = pd.DataFrame(results)
 
-    print(f"{len(k_values)}-FOLD CROSS-VALIDATION RESULTS")
-    print(results_df.to_string(
+    log(f"{len(k_values)}-FOLD CROSS-VALIDATION RESULTS")
+    log(results_df.to_string(
         index=False,
         float_format=lambda x: f'{x:.4f}'
     ))
 
-    print(f"\nCross-validation runtime: {cv_runtime:.4f} seconds")
+    log(f"\nCross-validation runtime: {cv_runtime:.4f} seconds")
 
     best_k = int(
         results_df.loc[
@@ -90,10 +98,10 @@ def knn_model(df_train, df_test, k_values,):
     )
     best_cv_accuracy = results_df['Average Accuracy'].max()
 
-    print("\nBEST HYPERPARAMETER")
-    print(f"Best k: {best_k}")
-    print(f"Best CV accuracy: {best_cv_accuracy:.4f}")
-    print(f"Best CV accuracy (%): {best_cv_accuracy * 100:.2f}%")
+    log("\nBEST HYPERPARAMETER")
+    log(f"Best k: {best_k}")
+    log(f"Best CV accuracy: {best_cv_accuracy:.4f}")
+    log(f"Best CV accuracy (%): {best_cv_accuracy * 100:.2f}%")
 
     retrain_start = time.time()
 
@@ -120,22 +128,22 @@ def knn_model(df_train, df_test, k_values,):
     retrain_end = time.time()
     retrain_runtime = retrain_end - retrain_start
 
-    print("\nFINAL MODEL TRAINING")
-    print(f"Selected k: {best_k}")
-    print(f"Retraining runtime: {retrain_runtime:.4f} seconds")
+    log("\nFINAL MODEL TRAINING")
+    log(f"Selected k: {best_k}")
+    log(f"Retraining runtime: {retrain_runtime:.4f} seconds")
 
     test_predictions = best_model.predict(X_test_encoded)
     test_accuracy = accuracy_score(y_test, test_predictions)
 
-    print("\nFINAL TEST SET RESULTS")
-    print(f"Best hyperparameter (k): {best_k}")
-    print(f"Test set accuracy: {test_accuracy:.4f}")
-    print(f"Test set accuracy (%): {test_accuracy * 100:.2f}%")
+    log("\nFINAL TEST SET RESULTS")
+    log(f"Best hyperparameter (k): {best_k}")
+    log(f"Test set accuracy: {test_accuracy:.4f}")
+    log(f"Test set accuracy (%): {test_accuracy * 100:.2f}%")
 
-    print("\nRUNTIME SUMMARY")
-    print(f"Cross-validation runtime: {cv_runtime:.4f} seconds")
-    print(f"Final model training runtime: {retrain_runtime:.4f} seconds")
-    print(f"Total runtime: {cv_runtime + retrain_runtime:.4f} seconds")
+    log("\nRUNTIME SUMMARY")
+    log(f"Cross-validation runtime: {cv_runtime:.4f} seconds")
+    log(f"Final model training runtime: {retrain_runtime:.4f} seconds")
+    log(f"Total runtime: {cv_runtime + retrain_runtime:.4f} seconds")
 
-knn_model(pois_train, pois_test, [5, 10, 15, 20, 25])
-knn_model(habi_train, habi_test, [1, 3, 5, 7, 10])
+knn_model(pois_train, pois_test, k_values=[5, 10, 15, 20, 25], filename="results/knn/poisonous")
+knn_model(habi_train, habi_test, k_values=[1, 3, 5, 7, 10], filename="results/knn/habitats")
