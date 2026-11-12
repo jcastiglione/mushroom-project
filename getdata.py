@@ -10,6 +10,8 @@ y = mushroom.data.targets
 
 shroom = pd.concat([X, y], axis=1)
 
+shroom.to_csv('data/mushroom.csv', index = False)
+
 #Since all variables are categorical, the only visualization required is this table
 #It also includes whether there are missing values, which could be useful.
 print(mushroom.variables.drop(columns=["role", "demographic", "description", "units"]))
