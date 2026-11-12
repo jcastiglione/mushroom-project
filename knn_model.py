@@ -145,5 +145,5 @@ def knn_model(df_train, df_test, k_values, filename):
     log(f"Final model training runtime: {retrain_runtime:.4f} seconds")
     log(f"Total runtime: {cv_runtime + retrain_runtime:.4f} seconds")
 
-knn_model(pois_train, pois_test, k_values=[5, 10, 15, 20, 25], filename="results/knn/poisonous")
-knn_model(habi_train, habi_test, k_values=[1, 3, 5, 7, 10], filename="results/knn/habitats")
+knn_model(pois_train, pois_test, k_values=[5, 10, 15, 20, 25], filename="results/knn/poisonous.txt")
+knn_model(habi_train, habi_test, k_values=[1, 3, 5, 7, 10], filename="results/knn/habitats.txt")

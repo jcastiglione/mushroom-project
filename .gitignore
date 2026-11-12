@@ -20,4 +20,4 @@ build/
 *.egg-info/
 
 #Ouptut text files
-.txt
+results/
