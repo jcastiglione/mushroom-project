@@ -152,50 +152,14 @@ knn_model(habi_train, habi_test,
           k_values=[1, 3, 5, 7, 10],
           filename="results/knn/habitats.txt")
 
-#Dimension Reduction
+pois_r_train = pd.read_csv('data/mushroom_poisonous_reduced_train.csv')
+pois_r_test = pd.read_csv('data/mushroom_poisonous_reduced_test.csv')
+habi_r_train = pd.read_csv('data/mushroom_habitat_reduced_train.csv')
+habi_r_test = pd.read_csv('data/mushroom_habitat_reduced_test.csv')
 
-#Reduce dimensions by combining similar category classifiers into one larger classifier.
-#Now instead of trying to match four different gill parts independently, the entire gill must be identical.
-prefixes = ["cap", "gill", "stalk", "veil", "ring"]
-
-pois_train_r = pois_train.copy()
-pois_test_r = pois_test.copy()
-habi_train_r = habi_train.copy()
-habi_test_r = habi_test.copy()
-
-for prefix in prefixes:
-    cols = pois_train_r.filter(regex=f"^{prefix}").columns
-    pois_train_r[prefix] = pois_train_r[cols].agg("".join, axis=1)
-
-    cols = pois_test_r.filter(regex=f"^{prefix}").columns
-    pois_test_r[prefix] = pois_test_r[cols].agg("".join, axis=1)
-
-    cols = habi_train_r.filter(regex=f"^{prefix}").columns
-    habi_train_r[prefix] = habi_train_r[cols].agg("".join, axis=1)
-
-    cols = habi_test_r.filter(regex=f"^{prefix}").columns
-    habi_test_r[prefix] = habi_test_r[cols].agg("".join, axis=1)
-
-pois_drop = ["cap-shape", "cap-surface", "cap-color",
-             "gill-attachment", "gill-spacing", "gill-size", "gill-color",
-             "stalk-shape", "stalk-surface-above-ring", "stalk-surface-below-ring", "stalk-color-above-ring", "stalk-color-below-ring",
-             "veil-type", "veil-color",
-             "ring-number", "ring-type"]
-pois_train_r = pois_train_r.drop(columns=pois_drop)
-pois_test_r = pois_test_r.drop(columns=pois_drop)
-
-habi_drop = ["cap-shape", "cap-surface",
-             "gill-attachment", "gill-spacing", "gill-size",
-             "stalk-shape", "stalk-surface-above-ring", "stalk-surface-below-ring",
-             "veil-type",
-             "ring-number", "ring-type"]
-
-habi_train_r = habi_train_r.drop(columns=habi_drop)
-habi_test_r = habi_test_r.drop(columns=habi_drop)
-
-knn_model(pois_train_r, pois_test_r,
+knn_model(pois_r_train, pois_r_test,
           k_values=[5, 10, 15, 20, 25],
           filename="results/knn/poisonous_reduced.txt")
-knn_model(habi_train_r, habi_test_r,
+knn_model(habi_r_train, habi_r_test,
           k_values=[1, 3, 5, 7, 10],
           filename="results/knn/habitats_reduced.txt")
