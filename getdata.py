@@ -16,6 +16,10 @@ shroom.to_csv('data/mushroom.csv', index = False)
 #It also includes whether there are missing values, which could be useful.
 print(mushroom.variables.drop(columns=["role", "demographic", "description", "units"]))
 
+#We will not use the stalk-root column since it has too many missing values (near 25%).
+#This could cause all missing values to group together for simple clustering problems.
+shroom = shroom.drop(columns=["stalk-root"])
+
 #Problem 1: Use variables aside from habitat to predict poisonous
 #Useful for predicting whether a mushroom is edible when you find it in the wild.
 #Models should use only few variables so that the model can be somewhat applicable for memorization.
