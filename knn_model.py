@@ -18,7 +18,7 @@ def knn_model(df_train, df_test, k_values,):
     X_test = df_test.iloc[:, :-1]
     y_test = df_test.iloc[:, -1]
 
-    kf = KFold(n_splits=len(k_values), shuffle=False)
+    kf = KFold(n_splits=len(k_values), shuffle=True, random_state=42)
     results = []
 
     cv_start = time.time()
