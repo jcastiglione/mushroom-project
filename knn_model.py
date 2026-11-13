@@ -12,6 +12,11 @@ pois_test = pd.read_csv('data/mushroom_poisonous_test.csv')
 habi_train = pd.read_csv('data/mushroom_habitat_train.csv')
 habi_test = pd.read_csv('data/mushroom_habitat_test.csv')
 
+pois_r_train = pd.read_csv('data/mushroom_poisonous_reduced_train.csv')
+pois_r_test = pd.read_csv('data/mushroom_poisonous_reduced_test.csv')
+habi_r_train = pd.read_csv('data/mushroom_habitat_reduced_train.csv')
+habi_r_test = pd.read_csv('data/mushroom_habitat_reduced_test.csv')
+
 def knn_model(df_train, df_test, k_values, filename):
     with open(filename, 'w') as f:
         pass
@@ -151,11 +156,6 @@ knn_model(pois_train, pois_test,
 knn_model(habi_train, habi_test,
           k_values=[1, 3, 5, 7, 10],
           filename="results/knn/habitats.txt")
-
-pois_r_train = pd.read_csv('data/mushroom_poisonous_reduced_train.csv')
-pois_r_test = pd.read_csv('data/mushroom_poisonous_reduced_test.csv')
-habi_r_train = pd.read_csv('data/mushroom_habitat_reduced_train.csv')
-habi_r_test = pd.read_csv('data/mushroom_habitat_reduced_test.csv')
 
 knn_model(pois_r_train, pois_r_test,
           k_values=[5, 10, 15, 20, 25],
