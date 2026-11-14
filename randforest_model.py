@@ -1,3 +1,7 @@
+import os
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
@@ -17,7 +21,28 @@ pois_r_test = pd.read_csv('data/mushroom_poisonous_reduced_test.csv')
 habi_r_train = pd.read_csv('data/mushroom_habitat_reduced_train.csv')
 habi_r_test = pd.read_csv('data/mushroom_habitat_reduced_test.csv')
 
+def plot_cv(results_df, hp_col, plot_filename, title):
+    fold_cols = [c for c in results_df.columns
+                 if c.startswith('Fold') and c.endswith('Accuracy')]
+    x_pos = np.arange(len(results_df))
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    for col in fold_cols:
+        ax.scatter(x_pos, results_df[col], color='gray', alpha=0.5, s=25)
+    ax.plot(x_pos, results_df['Average Accuracy'], marker='o', linewidth=2,
+            color='tab:blue', label='Mean CV accuracy')
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(results_df[hp_col].astype(str))
+    ax.set_xlabel(hp_col)
+    ax.set_ylabel('Accuracy')
+    ax.set_title(title)
+    ax.grid(alpha=0.3)
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(plot_filename, dpi=150)
+    plt.close(fig)
+
 def randforest_model(df_train, df_test, depth_values, filename):
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w') as f:
         pass
 
@@ -93,8 +118,10 @@ def randforest_model(df_train, df_test, depth_values, filename):
     results_df['Hyperparameter (max_depth)'] = results_df[
         'Hyperparameter (max_depth)'
     ].apply(lambda x: 'None' if pd.isna(x) else str(int(x)))
+    plot_cv(results_df, 'Hyperparameter (max_depth)',
+        filename.replace('.txt', '_cv.png'), 'Random Forest CV')
 
-    log(f"{len(depth_values)}-FOLD CROSS-VALIDATION RESULTS")
+    log(f"5-FOLD CROSS-VALIDATION RESULTS")
     log(results_df.to_string(
         index=False,
         float_format=lambda x: f'{x:.4f}'
@@ -142,18 +169,22 @@ def randforest_model(df_train, df_test, depth_values, filename):
     log(f"Selected max_depth: {best_depth}")
     log(f"Retraining runtime: {retrain_runtime:.4f} seconds")
 
+    predict_start = time.time()
     test_predictions = best_model.predict(X_test_encoded)
+    predict_runtime = time.time() - predict_start
     test_accuracy = accuracy_score(y_test, test_predictions)
 
     log("\nFINAL TEST SET RESULTS")
     log(f"Best hyperparameter (max_depth): {best_depth}")
     log(f"Test set accuracy: {test_accuracy:.4f}")
     log(f"Test set accuracy (%): {test_accuracy * 100:.2f}%")
+    log(f"Prediction runtime: {predict_runtime:.4f} seconds")
 
     log("\nRUNTIME SUMMARY")
     log(f"Cross-validation runtime: {cv_runtime:.4f} seconds")
     log(f"Final model training runtime: {retrain_runtime:.4f} seconds")
-    log(f"Total runtime: {cv_runtime + retrain_runtime:.4f} seconds")
+    log(f"Final prediction runtime: {predict_runtime:.4f} seconds")
+    log(f"Total runtime: {cv_runtime + retrain_runtime + predict_runtime:.4f} seconds")
 
 randforest_model(pois_train, pois_test,
                    depth_values=[3, 5, 12, 20, None],

@@ -1,3 +1,7 @@
+import os
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
@@ -17,7 +21,28 @@ pois_r_test = pd.read_csv('data/mushroom_poisonous_reduced_test.csv')
 habi_r_train = pd.read_csv('data/mushroom_habitat_reduced_train.csv')
 habi_r_test = pd.read_csv('data/mushroom_habitat_reduced_test.csv')
 
+def plot_cv(results_df, hp_col, plot_filename, title):
+    fold_cols = [c for c in results_df.columns
+                 if c.startswith('Fold') and c.endswith('Accuracy')]
+    x_pos = np.arange(len(results_df))
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    for col in fold_cols:
+        ax.scatter(x_pos, results_df[col], color='gray', alpha=0.5, s=25)
+    ax.plot(x_pos, results_df['Average Accuracy'], marker='o', linewidth=2,
+            color='tab:blue', label='Mean CV accuracy')
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(results_df[hp_col].astype(str))
+    ax.set_xlabel(hp_col)
+    ax.set_ylabel('Accuracy')
+    ax.set_title(title)
+    ax.grid(alpha=0.3)
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(plot_filename, dpi=150)
+    plt.close(fig)
+
 def knn_model(df_train, df_test, k_values, filename):
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w') as f:
         pass
 
@@ -31,7 +56,7 @@ def knn_model(df_train, df_test, k_values, filename):
     X_test = df_test.iloc[:, :-1]
     y_test = df_test.iloc[:, -1]
 
-    kf = KFold(n_splits=len(k_values), shuffle=True, random_state=42)
+    kf = KFold(n_splits = 5, shuffle=True, random_state=42)
     results = []
 
     cv_start = time.time()
@@ -76,7 +101,7 @@ def knn_model(df_train, df_test, k_values, filename):
         mean_accuracy = np.mean(fold_accuracies)
 
         resultsrow = {'Hyperparameter (k)': k}
-        for i in range(len(k_values)):
+        for i in range(len(fold_accuracies)):
             name = 'Fold ' + str(i+1) + ' Accuracy'
             resultsrow[name] = fold_accuracies[i]
         resultsrow['Average Accuracy'] = mean_accuracy
@@ -87,8 +112,10 @@ def knn_model(df_train, df_test, k_values, filename):
     cv_runtime = cv_end - cv_start
 
     results_df = pd.DataFrame(results)
+    plot_cv(results_df, 'Hyperparameter (k)',
+        filename.replace('.txt', '_cv.png'), 'kNN CV')
 
-    log(f"{len(k_values)}-FOLD CROSS-VALIDATION RESULTS")
+    log(f"5-FOLD CROSS-VALIDATION RESULTS")
     log(results_df.to_string(
         index=False,
         float_format=lambda x: f'{x:.4f}'
@@ -137,18 +164,22 @@ def knn_model(df_train, df_test, k_values, filename):
     log(f"Selected k: {best_k}")
     log(f"Retraining runtime: {retrain_runtime:.4f} seconds")
 
+    predict_start = time.time()
     test_predictions = best_model.predict(X_test_encoded)
+    predict_runtime = time.time() - predict_start
     test_accuracy = accuracy_score(y_test, test_predictions)
 
     log("\nFINAL TEST SET RESULTS")
     log(f"Best hyperparameter (k): {best_k}")
     log(f"Test set accuracy: {test_accuracy:.4f}")
     log(f"Test set accuracy (%): {test_accuracy * 100:.2f}%")
+    log(f"Prediction runtime: {predict_runtime:.4f} seconds")
 
     log("\nRUNTIME SUMMARY")
     log(f"Cross-validation runtime: {cv_runtime:.4f} seconds")
     log(f"Final model training runtime: {retrain_runtime:.4f} seconds")
-    log(f"Total runtime: {cv_runtime + retrain_runtime:.4f} seconds")
+    log(f"Final prediction runtime: {predict_runtime:.4f} seconds")
+    log(f"Total runtime: {cv_runtime + retrain_runtime + predict_runtime:.4f} seconds")
 
 knn_model(pois_train, pois_test,
           k_values=[5, 10, 15, 20, 25],
